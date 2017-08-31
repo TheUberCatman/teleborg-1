@@ -285,19 +285,24 @@ impl Bot {
         let chat_id: &str = &chat_id.to_string();
         let path = ["exportChatInviteLink"];
         let params = [("chat_id", chat_id)];
-        self.call(&path, &params)
+        let url = ::construct_api_url(&self.bot_url, &path);
+        let mut data = self.client.post(&url).form(&params).send()?;
+        let rjson: Value = check_for_error(data.json()?)?;
+        let result_json = rjson.get("result").ok_or(JsonNotFound)?;
+        let invite_link: String = serde_json::from_value(result_json.clone())?;
+        Ok(invite_link)
     }
 
     /// API call which edits a message text based on the combination of the chat_id and message_id
     /// or by passing only the inline_message_id.
-    pub fn edit_message_text<M: ReplyMarkup>(&self,
-                                             chat_id: Option<&i64>,
-                                             message_id: Option<&i64>,
-                                             inline_message_id: Option<&str>,
-                                             text: &str,
-                                             parse_mode: Option<&ParseMode>,
-                                             disable_web_page_preview: Option<bool>,
-                                             reply_markup: Option<M>) -> Result<Message> {
+    pub fn edit_message_text(&self,
+                             chat_id: Option<&i64>,
+                             message_id: Option<&i64>,
+                             inline_message_id: Option<&str>,
+                             text: &str,
+                             parse_mode: Option<&ParseMode>,
+                             disable_web_page_preview: Option<bool>,
+                             reply_markup: Option<InlineKeyboardMarkup>) -> Result<Message> {
         debug!("Calling edit_message_text...");
         let chat_id: &str = &chat_id.map(|c| c.to_string()).unwrap_or(String::new());
         let message_id: &str = &message_id.map(|m| m.to_string()).unwrap_or(String::new());
@@ -315,17 +320,17 @@ impl Bot {
             ("parse_mode", parse_mode),
             ("disable_web_page_preview", disable_web_page_preview),
             ("reply_markup", reply_markup)];
-        self.call(&path, &params)
+        self.post_message(&path, &params)
     }
 
     /// API call which edits a message caption based on the combination of the chat_id and message_id
     /// or by passing only the inline_message_id.
-    pub fn edit_message_caption<M: ReplyMarkup>(&self,
-                                                chat_id: Option<&i64>,
-                                                message_id: Option<&i64>,
-                                                inline_message_id: Option<&str>,
-                                                caption: Option<&str>,
-                                                reply_markup: Option<M>) -> Result<Message> {
+    pub fn edit_message_caption(&self,
+                                chat_id: Option<&i64>,
+                                message_id: Option<&i64>,
+                                inline_message_id: Option<&str>,
+                                caption: Option<&str>,
+                                reply_markup: Option<InlineKeyboardMarkup>) -> Result<Message> {
         debug!("Calling edit_message_caption...");
         let chat_id: &str = &chat_id.map(|c| c.to_string()).unwrap_or(String::new());
         let message_id: &str = &message_id.map(|m| m.to_string()).unwrap_or(String::new());
@@ -340,16 +345,16 @@ impl Bot {
             ("inline_message_id", inline_message_id),
             ("caption", caption),
             ("reply_markup", reply_markup)];
-        self.call(&path, &params)
+        self.post_message(&path, &params)
     }
 
     /// API call which edits a message reply markup based on the combination of the chat_id and message_id
     /// or by passing only the inline_message_id.
-    pub fn edit_message_reply_markup<M: ReplyMarkup>(&self,
-                                                     chat_id: Option<&i64>,
-                                                     message_id: Option<&i64>,
-                                                     inline_message_id: Option<&str>,
-                                                     reply_markup: Option<M>) -> Result<Message> {
+    pub fn edit_message_reply_markup(&self,
+                                     chat_id: Option<&i64>,
+                                     message_id: Option<&i64>,
+                                     inline_message_id: Option<&str>,
+                                     reply_markup: Option<InlineKeyboardMarkup>) -> Result<Message> {
         debug!("Calling edit_message_reply_markup...");
         let chat_id: &str = &chat_id.map(|c| c.to_string()).unwrap_or(String::new());
         let message_id: &str = &message_id.map(|m| m.to_string()).unwrap_or(String::new());
@@ -362,7 +367,7 @@ impl Bot {
             ("message_id", message_id),
             ("inline_message_id", inline_message_id),
             ("reply_markup", reply_markup)];
-        self.call(&path, &params)
+        self.post_message(&path, &params)
     }
 
     /// API call to delete messages with the following limitations:
@@ -376,8 +381,13 @@ impl Bot {
         let message_id: &str = &message_id.to_string();
         let path = ["deleteMessage"];
         let params = [("chat_id", chat_id),
-            ("message_id", message_id)];
-        self.call(&path, &params)
+                      ("message_id", message_id)];
+        let url = ::construct_api_url(&self.bot_url, &path);
+        let mut data = self.client.post(&url).form(&params).send()?;
+        let rjson: Value = check_for_error(data.json()?)?;
+        let result_json = rjson.get("result").ok_or(JsonNotFound)?;
+        let result: bool = serde_json::from_value(result_json.clone())?;
+        Ok(result)
     }
 
     /// The actual networking done for sending messages.
